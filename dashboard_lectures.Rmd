@@ -1,0 +1,804 @@
+---
+title: "Mes lectures"
+output: 
+  flexdashboard::flex_dashboard:
+    theme: lumen
+    orientation: rows
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(DT)
+library(crosstalk)
+library(fontawesome)
+library(hrbrthemes)
+library(viridis)
+library(plotly)
+library(packcircles)
+library(flexdashboard)
+library(ggplot2)
+library(highcharter)
+library(forcats)
+```
+
+```{r}
+knitr::opts_chunk$set(echo = F)
+knitr::opts_chunk$set(warning = F)
+knitr::opts_chunk$set(message = F)
+```
+
+
+
+
+```{r}
+# Fichier source de données
+
+data <- read.csv("liste_totale_wikidata.csv", encoding = "UTF-8")
+
+st <- SharedData$new(data)
+
+```
+
+
+Total des lectures
+=======================================
+
+Column {.sidebar data-width=650}
+------------------------------------------------
+
+### Lectures mensuelles 2020-2024
+
+```{r}
+mois <- data %>% 
+  group_by(Année_début) %>% 
+  count(mois_début) %>%mutate(mois_début = recode(mois_début,
+            "1" = "Ja",
+            "2" = "F",
+            "3" = "Ma",
+            "4" = "Av",
+            "5" = "Mai",
+            "6" = "Juin",
+            "7" = "Juil",
+            "8" = "Ao",
+            "9" = "S",
+            "10" = "O",
+            "11" = "N",
+            "12" = "D"))
+
+mois$mois_début <- factor(mois$mois_début, levels = c("Ja", "F", "Ma", "Av", "Mai", "Juin", "Juil", "Ao", "S", "O", "N", "D"))
+
+mois$Année_début <- factor(mois$Année_début)
+
+ plotmois <- mois %>%
+  ggplot( aes(x=mois_début, y=n, group=Année_début, color=Année_début)) +
+    geom_line() +
+    scale_color_viridis(discrete = TRUE, name = "Année") +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=14)
+    ) +
+    ggtitle("Nombre de lecture par mois") +
+    theme_ipsum()+
+    xlab("Mois de début de lecture") +
+    ylab ("Nombre")
+ 
+ggplotly(plotmois)
+```
+
+
+
+
+Row {data-width=450}
+---------------------------------------
+
+### Nombre de livres lus 
+
+```{r}
+
+nbr <- data %>% 
+        summarise(n())
+
+valueBox(
+  value = nbr, 
+  icon = "fa-book")
+
+```
+
+### Nombre de pages lues
+
+```{r}
+
+nbrpages <- data %>%
+  filter(Pages > 0) %>%
+  summarise(Pages) %>%
+  sum()
+
+valueBox(
+  value = nbrpages, 
+  icon = "fa-file")
+
+```
+
+Row {.tabset data-width=450}
+-------------------------------------------------
+
+### Genre
+
+```{r}
+
+genre <- data %>% 
+    mutate(Genre.auteur = recode(Genre.auteur,
+           "C" = "Collectif",
+           "F" = "Femme",
+           "H" = "Homme",
+           "M" = "Homme")) %>% 
+    count(Genre.auteur, Année_début)
+
+genre <- ggplot(genre, aes(fill= Genre.auteur, y=n, x=factor(Année_début, levels= c("2020", "2021", "2022", "2023", "2024")), text = paste("Nombre : ", n, "\nType :", Genre.auteur))) +
+  geom_bar(position = "stack", stat = "identity" ) +
+  ggtitle("Répartition par genres et par années") +
+   labs(
+        x = "Année de lecture",
+        y = "Nombre de personnes",
+        fill = "Légende"
+    ) +
+  scale_fill_viridis(discrete = T, option = "viridis") +
+  theme_ipsum()
+
+ggplotly(genre, tooltip = "text")
+
+```
+
+
+### Top des autrices et auteurs
+
+```{r}
+auteurs <- data %>% 
+  group_by(Auteur) %>% 
+  count(Auteur) %>% 
+  arrange(desc(n)) %>% 
+  head(28)
+
+packing <- circleProgressiveLayout(auteurs$n, sizetype="area")
+
+auteurs <- cbind.data.frame(auteurs, packing)
+
+myPlotCord <- circleLayoutVertices(packing)
+
+pl <- ggplot() + 
+  geom_polygon(data = myPlotCord, aes(x, y, group = id, fill= as.factor(id))) + 
+  geom_text(data = auteurs, aes(x, y, size=n, label = paste0(Auteur))) + 
+  scale_size_continuous(range = c(2,4)) + 
+  coord_equal() + 
+  theme_void() +
+  theme(legend.position="none",
+        panel.border = element_blank(),
+        panel.grid.major = element_blank()) + 
+  labs(title ="Top des autrices et des auteurs") +
+  labs(subtitle ="Population") +
+  scale_fill_viridis(discrete = T, option = "viridis")
+
+
+ggplotly(pl)
+
+
+
+```
+
+
+### Nationalités
+
+```{r}
+natio <- data %>% 
+  group_by (Nationalité) %>% 
+  count(Nationalité) %>% 
+  arrange(desc(n)) %>% 
+  head(10)
+
+options(highcharter.theme = hc_theme_smpl(tooltip = list(valueDecimals = 0)))
+
+hc <- natio %>%
+  hchart(
+    "treemap", 
+    hcaes(x = Nationalité, value = n, color = n)
+    ) %>% 
+  hc_title(text = "Nationalités des auteurs et autrices") %>%
+  hc_colorAxis(stops = color_stops(colors = viridis(100)))
+
+hc
+
+```
+
+### Top des maisons d'édition
+
+```{r}
+edit <- data %>% 
+  group_by(Editeur) %>% 
+  count(Editeur) %>% 
+  arrange(desc(n)) %>% 
+  head(10) %>%
+  ggplot(aes(x=Editeur, y=n)) +
+    geom_bar(stat="identity", fill="#32648E", alpha=.6, width=.5) +
+    coord_flip() +
+    xlab("Editeur")+
+    ylab("Nombre")
+
+edit
+```
+
+
+
+2020
+==================================================
+
+```{r}
+an20 <- data %>% 
+  filter(Année_début == "2020")
+```
+
+
+Row
+--------------------------------------------------
+### Nombre de livres lus 
+
+```{r}
+
+nbr20 <- an20 %>% 
+        summarise(n())
+
+valueBox(
+  value = nbr20, 
+  icon = "fa-book")
+
+```
+
+### Nombre de pages lues
+
+```{r}
+
+nbrpages20 <- an20 %>%
+  filter(Pages > 0) %>%
+  reframe(Pages) %>%
+  sum()
+
+valueBox(
+  value = nbrpages20, 
+  icon = "fa-file")
+
+```
+
+### Temps moyen de lecture (en jours)
+
+```{r}
+moytime20 <- mean(an20$ecart_date)
+
+moytime20 <- round(moytime20, 2)
+
+valueBox(
+  value = moytime20, 
+  icon = "fa-clock")
+
+
+```
+
+
+Row
+--------------------------------------------------
+
+```{r}
+time20 <- an20 %>% 
+  ggplot(aes(x=Pages, y=ecart_date, color=Genre.auteur)) + 
+    geom_point(size = 3) +
+    labs(title="Temps de lecture suivant le nombre \nde pages",
+       x="Nombre de pages", y = "Nombre de jours de lecture", colour = "Genre")+
+    scale_colour_viridis_d(labels = c("Collectif", "Femme", "Homme"))+
+    theme_ipsum()
+
+time20
+```
+
+```{r}
+natio20 <- an20 %>% 
+  group_by (Nationalité) %>% 
+  filter(Nationalité != "N/A") %>%
+  count(Nationalité) %>% 
+  arrange(desc(n)) %>% 
+  head(10)
+
+options(highcharter.theme = hc_theme_smpl(tooltip = list(valueDecimals = 0)))
+
+hc <- natio20 %>%
+  hchart(
+    "treemap", 
+    hcaes(x = Nationalité, value = n, color = n)
+    ) %>%
+  hc_title(text = "Nationalités des auteurs et autrices")%>%
+  hc_colorAxis(stops = color_stops(colors = viridis(100)))
+
+hc
+
+```
+
+```{r}
+type20 <- an20 %>%
+  count(Format) %>% 
+  plot_ly(labels = ~Format, values = ~n, type = "pie",
+        textposition = 'inside',
+        textinfo = 'label+percent',
+        insidetextfont = list(color = '#FFFFFF'),
+        hoverinfo = 'text',
+        marker = list(colors = c("#481568", "#55C667"), line = list(color = '#FFFFFF', width = 1)), 
+        showlegend = FALSE) %>% 
+  layout(title = 'Supports de lecture',
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+type20
+
+```
+
+
+
+2021
+=========================================
+
+```{r}
+an21 <- data %>% 
+  filter(Année_début == "2021")
+```
+
+Row
+--------------------------------------------------
+### Nombre de livres lus 
+
+```{r}
+
+nbr21 <- an21 %>% 
+        summarise(n())
+
+valueBox(
+  value = nbr21, 
+  icon = "fa-book")
+
+```
+
+### Nombre de pages lues
+
+```{r}
+
+nbrpages21 <- an21 %>%
+  filter(Pages > 0) %>%
+  reframe(Pages) %>%
+  sum()
+
+valueBox(
+  value = nbrpages21, 
+  icon = "fa-file")
+
+```
+
+### Temps moyen de lecture (en jours)
+
+```{r}
+moytime21 <- mean(an21$ecart_date)
+
+moytime21 <- round(moytime21, 2)
+
+valueBox(
+  value = moytime21, 
+  icon = "fa-clock")
+
+
+```
+
+Row
+--------------------------------------------------
+
+```{r}
+time21 <- an21 %>% 
+  ggplot(aes(x=Pages, y=ecart_date, color=Genre.auteur)) + 
+    geom_point(size = 3) +
+    labs(title="Temps de lecture suivant le nombre \nde pages",
+       x="Nombre de pages", y = "Nombre de jours de lecture", colour = "Genre")+
+    scale_colour_viridis_d(labels = c("Collectif", "Femme", "Homme"))+
+    theme_ipsum()
+
+time21
+```
+
+```{r}
+natio21 <- an21 %>% 
+  group_by (Nationalité) %>% 
+  filter(Nationalité != "N/A") %>%
+  count(Nationalité) %>% 
+  arrange(desc(n)) %>% 
+  head(10)
+
+options(highcharter.theme = hc_theme_smpl(tooltip = list(valueDecimals = 0)))
+
+hc <- natio21 %>%
+  hchart(
+    "treemap", 
+    hcaes(x = Nationalité, value = n, color = n)
+    ) %>%
+  hc_title(text = "Nationalités des auteurs et autrices")%>%
+  hc_colorAxis(stops = color_stops(colors = viridis(100)))
+
+hc
+
+```
+
+```{r}
+type21 <- an21 %>%
+  count(Format) %>% 
+  plot_ly(labels = ~Format, values = ~n, type = "pie",
+        textposition = 'inside',
+        textinfo = 'label+percent',
+        insidetextfont = list(color = '#FFFFFF'),
+        hoverinfo = 'text',
+        marker = list(colors = c("#481568", "#55C667"), line = list(color = '#FFFFFF', width = 1)), 
+        showlegend = FALSE) %>% 
+  layout(title = 'Supports de lecture',
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+type21
+
+```
+
+2022
+=========================================
+
+```{r}
+an22 <- data %>% 
+  filter(Année_début == "2022")
+```
+
+Row
+--------------------------------------------------
+### Nombre de livres lus 
+
+```{r}
+
+nbr22 <- an22 %>% 
+        summarise(n())
+
+valueBox(
+  value = nbr22, 
+  icon = "fa-book")
+
+```
+
+### Nombre de pages lues
+
+```{r}
+
+nbrpages22 <- an22 %>%
+  filter(Pages > 0) %>%
+  reframe(Pages) %>%
+  sum()
+
+valueBox(
+  value = nbrpages22, 
+  icon = "fa-file")
+
+```
+
+### Temps moyen de lecture (en jours)
+
+```{r}
+moytime22 <- mean(an22$ecart_date)
+
+moytime22 <- round(moytime22, 2)
+
+valueBox(
+  value = moytime22, 
+  icon = "fa-clock")
+
+
+```
+
+Row
+--------------------------------------------------
+
+```{r}
+time <- an22 %>% 
+  ggplot(aes(x=Pages, y=ecart_date, color=Genre.auteur)) + 
+    geom_point(size = 3) +
+    labs(title="Temps de lecture suivant le nombre \nde pages",
+       x="Nombre de pages", y = "Nombre de jours de lecture", colour = "Genre")+
+    scale_colour_viridis_d(labels = c("Collectif", "Femme", "Homme"))+
+    theme_ipsum()
+
+time
+```
+
+```{r}
+natio22 <- an22 %>% 
+  group_by (Nationalité) %>% 
+  filter(Nationalité != "N/A") %>%
+  count(Nationalité) %>% 
+  arrange(desc(n)) %>% 
+  head(10)
+
+options(highcharter.theme = hc_theme_smpl(tooltip = list(valueDecimals = 0)))
+
+hc <- natio22 %>%
+  hchart(
+    "treemap", 
+    hcaes(x = Nationalité, value = n, color = n)
+    ) %>%
+  hc_title(text = "Nationalités des auteurs et autrices")%>%
+  hc_colorAxis(stops = color_stops(colors = viridis(100)))
+
+hc
+
+```
+
+```{r}
+type22 <- an22 %>%
+  count(Format) %>% 
+  plot_ly(labels = ~Format, values = ~n, type = "pie",
+        textposition = 'inside',
+        textinfo = 'label+percent',
+        insidetextfont = list(color = '#FFFFFF'),
+        hoverinfo = 'text',
+        marker = list(colors = c("#481568", "#55C667"), line = list(color = '#FFFFFF', width = 1)), 
+        showlegend = FALSE) %>% 
+  layout(title = 'Supports de lecture',
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+type22
+
+```
+
+2023
+=========================================
+
+```{r}
+an23 <- data %>% 
+  filter(Année_début == "2023")
+```
+
+Row
+--------------------------------------------------
+### Nombre de livres lus 
+
+```{r}
+
+nbr23 <- an23 %>% 
+        summarise(n())
+
+valueBox(
+  value = nbr23, 
+  icon = "fa-book")
+
+```
+
+### Nombre de pages lues
+
+```{r}
+
+nbrpages23 <- an23 %>%
+  filter(Pages > 0) %>%
+  reframe(Pages) %>%
+  sum()
+
+valueBox(
+  value = nbrpages23, 
+  icon = "fa-file")
+
+```
+
+### Temps moyen de lecture (en jours)
+
+```{r}
+moytime23 <- mean(an23$ecart_date)
+
+moytime23 <- round(moytime23, 2)
+
+valueBox(
+  value = moytime23, 
+  icon = "fa-clock")
+
+
+```
+
+Row
+--------------------------------------------------
+
+```{r}
+time <- an23 %>% 
+  ggplot(aes(x=Pages, y=ecart_date, color=Genre.auteur)) + 
+    geom_point(size = 3) +
+    labs(title="Temps de lecture suivant le nombre \nde pages",
+       x="Nombre de pages", y = "Nombre de jours de lecture", colour = "Genre")+
+    scale_colour_viridis_d(labels = c("Collectif", "Femme", "Homme"))+
+    theme_ipsum()
+
+time
+```
+
+```{r}
+natio23 <- an23 %>% 
+  group_by (Nationalité) %>% 
+  filter(Nationalité != "N/A") %>%
+  count(Nationalité) %>% 
+  arrange(desc(n)) %>% 
+  head(10)
+
+options(highcharter.theme = hc_theme_smpl(tooltip = list(valueDecimals = 0)))
+
+hc <- natio23 %>%
+  hchart(
+    "treemap", 
+    hcaes(x = Nationalité, value = n, color = n)
+    ) %>%
+  hc_title(text = "Nationalités des auteurs et autrices")%>%
+  hc_colorAxis(stops = color_stops(colors = viridis(100)))
+
+hc
+
+```
+
+```{r}
+type23 <- an23 %>%
+  count(Format) %>% 
+  plot_ly(labels = ~Format, values = ~n, type = "pie",
+        textposition = 'inside',
+        textinfo = 'label+percent',
+        insidetextfont = list(color = '#FFFFFF'),
+        hoverinfo = 'text',
+        marker = list(colors = c("#481568", "#55C667"), line = list(color = '#FFFFFF', width = 1)), 
+        showlegend = FALSE) %>% 
+  layout(title = 'Supports de lecture',
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+type23
+
+```
+
+2024
+=========================================
+
+```{r}
+an24 <- data %>% 
+  filter(Année_début == "2024")
+```
+
+Row
+--------------------------------------------------
+### Nombre de livres lus 
+
+```{r}
+
+nbr24 <- an24 %>% 
+        summarise(n())
+
+valueBox(
+  value = nbr24, 
+  icon = "fa-book")
+
+```
+
+### Nombre de pages lues
+
+```{r}
+
+nbrpages24 <- an24 %>%
+  filter(Pages > 0) %>%
+  reframe(Pages) %>%
+  sum()
+
+valueBox(
+  value = nbrpages24, 
+  icon = "fa-file")
+
+```
+
+### Temps moyen de lecture (en jours)
+
+```{r}
+moytime24 <- mean(an24$ecart_date)
+
+moytime24 <- round(moytime24, 2)
+
+valueBox(
+  value = moytime20, 
+  icon = "fa-clock")
+
+
+```
+
+Row
+--------------------------------------------------
+
+```{r}
+time <- an24 %>% 
+  ggplot(aes(x=Pages, y=ecart_date, color=Genre.auteur)) + 
+    geom_point(size = 3) +
+    labs(title="Temps de lecture suivant le nombre \nde pages",
+       x="Nombre de pages", y = "Nombre de jours de lecture", colour = "Genre")+
+    scale_colour_viridis_d(labels = c("Collectif", "Femme", "Homme"))+
+    theme_ipsum()
+
+time
+```
+
+```{r}
+natio24 <- an24 %>% 
+  group_by (Nationalité) %>% 
+  filter(Nationalité != "N/A") %>%
+  count(Nationalité) %>% 
+  arrange(desc(n)) %>% 
+  head(10)
+
+options(highcharter.theme = hc_theme_smpl(tooltip = list(valueDecimals = 0)))
+
+hc <- natio24 %>%
+  hchart(
+    "treemap", 
+    hcaes(x = Nationalité, value = n, color = n)
+    ) %>%
+  hc_title(text = "Nationalités des auteurs et autrices")%>%
+  hc_colorAxis(stops = color_stops(colors = viridis(100)))
+
+hc
+
+```
+
+```{r}
+type24 <- an24 %>%
+  count(Format) %>% 
+  plot_ly(labels = ~Format, values = ~n, type = "pie",
+        textposition = 'inside',
+        textinfo = 'label+percent',
+        insidetextfont = list(color = '#FFFFFF'),
+        hoverinfo = 'text',
+        marker = list(colors = c("#481568", "#55C667"), line = list(color = '#FFFFFF', width = 1)), 
+        showlegend = FALSE) %>% 
+  layout(title = 'Supports de lecture',
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+type24
+
+```
+
+Données
+=========================================
+
+
+### Recherche dans les données {data-width=150}
+
+```{r filter-section}
+
+filter_select(
+    id = "Auteur",
+    label = "Auteur.ice",
+    sharedData = st,
+    group = ~Auteur
+)
+
+filter_checkbox(
+    id ="Année_début",
+    label = "Année",
+    sharedData = st,
+    group = ~Année_début
+
+)
+
+```
+
+### Données 
+
+```{r filterable_table}
+
+datatable(st)
+
+```
+
+
