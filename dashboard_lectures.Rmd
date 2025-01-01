@@ -191,7 +191,8 @@ ggplotly(pl)
 
 ```{r}
 natio <- data %>% 
-  group_by (Nationalité) %>% 
+  group_by (Nationalité) %>%
+  filter(Nationalité != "N/A") %>%
   count(Nationalité) %>% 
   arrange(desc(n)) %>% 
   head(10)
