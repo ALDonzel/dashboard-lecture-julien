@@ -1,5 +1,5 @@
 ---
-title: "Mes lectures"
+title: "Lectures 2020-2024"
 output: 
   flexdashboard::flex_dashboard:
     theme: lumen
@@ -219,7 +219,7 @@ edit <- data %>%
   count(Editeur) %>% 
   arrange(desc(n)) %>% 
   head(10) %>%
-  ggplot(aes(x=Editeur, y=n)) +
+  ggplot(aes(x=reorder(Editeur, n), y=n)) +
     geom_bar(stat="identity", fill="#32648E", alpha=.6, width=.5) +
     coord_flip() +
     xlab("Editeur")+
