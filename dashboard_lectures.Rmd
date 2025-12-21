@@ -1,5 +1,5 @@
 ---
-title: "Lectures 2020-2024"
+title: "Lectures 2020-2025"
 output: 
   flexdashboard::flex_dashboard:
     theme: lumen
@@ -12,7 +12,6 @@ library(tidyverse)
 library(DT)
 library(crosstalk)
 library(fontawesome)
-library(hrbrthemes)
 library(viridis)
 library(plotly)
 library(packcircles)
@@ -34,7 +33,7 @@ knitr::opts_chunk$set(message = F)
 ```{r}
 # Fichier source de données
 
-data <- read.csv("liste_totale_wikidata.csv", encoding = "UTF-8")
+data <- read.csv("liste_totale.csv", encoding = "UTF-8")
 
 st <- SharedData$new(data)
 
@@ -47,7 +46,7 @@ Total des lectures
 Column {.sidebar data-width=650}
 ------------------------------------------------
 
-### Lectures mensuelles 2020-2024
+### Lectures mensuelles 2020-2025
 
 ```{r}
 mois <- data %>% 
@@ -79,7 +78,7 @@ mois$Année_début <- factor(mois$Année_début)
       plot.title = element_text(size=14)
     ) +
     ggtitle("Nombre de lecture par mois") +
-    theme_ipsum()+
+    theme_minimal()+
     xlab("Mois de début de lecture") +
     ylab ("Nombre")
  
@@ -97,7 +96,7 @@ Row {data-width=450}
 ```{r}
 
 nbr <- data %>% 
-        summarise(n())
+        reframe(n())
 
 valueBox(
   value = nbr, 
@@ -111,7 +110,7 @@ valueBox(
 
 nbrpages <- data %>%
   filter(Pages > 0) %>%
-  summarise(Pages) %>%
+  reframe(Pages) %>%
   sum()
 
 valueBox(
@@ -135,7 +134,7 @@ genre <- data %>%
            "M" = "Homme")) %>% 
     count(Genre.auteur, Année_début)
 
-genre <- ggplot(genre, aes(fill= Genre.auteur, y=n, x=factor(Année_début, levels= c("2020", "2021", "2022", "2023", "2024")), text = paste("Nombre : ", n, "\nType :", Genre.auteur))) +
+genre <- ggplot(genre, aes(fill= Genre.auteur, y=n, x=factor(Année_début, levels= c("2020", "2021", "2022", "2023", "2024", "2025")), text = paste("Nombre : ", n, "\nType :", Genre.auteur))) +
   geom_bar(position = "stack", stat = "identity" ) +
   ggtitle("Répartition par genres et par années") +
    labs(
@@ -144,7 +143,7 @@ genre <- ggplot(genre, aes(fill= Genre.auteur, y=n, x=factor(Année_début, leve
         fill = "Légende"
     ) +
   scale_fill_viridis(discrete = T, option = "viridis") +
-  theme_ipsum()
+  theme_minimal()
 
 ggplotly(genre, tooltip = "text")
 
@@ -246,7 +245,7 @@ Row
 ```{r}
 
 nbr20 <- an20 %>% 
-        summarise(n())
+        reframe(n())
 
 valueBox(
   value = nbr20, 
@@ -294,7 +293,7 @@ time20 <- an20 %>%
     labs(title="Temps de lecture suivant le nombre \nde pages",
        x="Nombre de pages", y = "Nombre de jours de lecture", colour = "Genre")+
     scale_colour_viridis_d(labels = c("Collectif", "Femme", "Homme"))+
-    theme_ipsum()
+    theme_minimal()
 
 time20
 ```
@@ -403,7 +402,7 @@ time21 <- an21 %>%
     labs(title="Temps de lecture suivant le nombre \nde pages",
        x="Nombre de pages", y = "Nombre de jours de lecture", colour = "Genre")+
     scale_colour_viridis_d(labels = c("Collectif", "Femme", "Homme"))+
-    theme_ipsum()
+    theme_minimal()
 
 time21
 ```
@@ -510,7 +509,7 @@ time <- an22 %>%
     labs(title="Temps de lecture suivant le nombre \nde pages",
        x="Nombre de pages", y = "Nombre de jours de lecture", colour = "Genre")+
     scale_colour_viridis_d(labels = c("Collectif", "Femme", "Homme"))+
-    theme_ipsum()
+    theme_minimal()
 
 time
 ```
@@ -617,7 +616,7 @@ time <- an23 %>%
     labs(title="Temps de lecture suivant le nombre \nde pages",
        x="Nombre de pages", y = "Nombre de jours de lecture", colour = "Genre")+
     scale_colour_viridis_d(labels = c("Collectif", "Femme", "Homme"))+
-    theme_ipsum()
+    theme_minimal()
 
 time
 ```
@@ -724,7 +723,7 @@ time <- an24 %>%
     labs(title="Temps de lecture suivant le nombre \nde pages",
        x="Nombre de pages", y = "Nombre de jours de lecture", colour = "Genre")+
     scale_colour_viridis_d(labels = c("Collectif", "Femme", "Homme"))+
-    theme_ipsum()
+    theme_minimal()
 
 time
 ```
@@ -769,6 +768,114 @@ type24
 
 ```
 
+2025
+=========================================
+
+```{r}
+an25 <- data %>% 
+  filter(Année_début == "2025")
+```
+
+Row
+--------------------------------------------------
+### Nombre de livres lus 
+
+```{r}
+
+nbr25 <- an25 %>% 
+        summarise(n())
+
+valueBox(
+  value = nbr25, 
+  icon = "fa-book")
+
+```
+
+### Nombre de pages lues
+
+```{r}
+
+nbrpages25 <- an25 %>%
+  filter(Pages > 0) %>%
+  reframe(Pages) %>%
+  sum()
+
+valueBox(
+  value = nbrpages25, 
+  icon = "fa-file")
+
+```
+
+### Temps moyen de lecture (en jours)
+
+```{r}
+moytime25 <- mean(an25$ecart_date)
+
+moytime25 <- round(moytime25, 2)
+
+valueBox(
+  value = moytime25, 
+  icon = "fa-clock")
+
+
+```
+
+Row
+--------------------------------------------------
+
+```{r}
+time25 <- an25 %>% 
+  ggplot(aes(x=Pages, y=ecart_date, color=Genre.auteur)) + 
+    geom_point(size = 3) +
+    labs(title="Temps de lecture suivant le nombre \nde pages",
+       x="Nombre de pages", y = "Nombre de jours de lecture", colour = "Genre")+
+    scale_colour_viridis_d(labels = c("Collectif", "Femme", "Homme"))+
+    theme_minimal()
+
+time25
+```
+
+```{r}
+natio25 <- an25 %>% 
+  group_by (Nationalité) %>% 
+  filter(Nationalité != "N/A") %>%
+  count(Nationalité) %>% 
+  arrange(desc(n)) %>% 
+  head(10)
+
+options(highcharter.theme = hc_theme_smpl(tooltip = list(valueDecimals = 0)))
+
+hc <- natio25 %>%
+  hchart(
+    "treemap", 
+    hcaes(x = Nationalité, value = n, color = n)
+    ) %>%
+  hc_title(text = "Nationalités des auteurs et autrices")%>%
+  hc_colorAxis(stops = color_stops(colors = viridis(100)))
+
+hc
+
+```
+
+```{r}
+type25 <- an25 %>%
+  count(Format) %>% 
+  plot_ly(labels = ~Format, values = ~n, type = "pie",
+        textposition = 'inside',
+        textinfo = 'label+percent',
+        insidetextfont = list(color = '#FFFFFF'),
+        hoverinfo = 'text',
+        marker = list(colors = c("#481568", "#55C667"), line = list(color = '#FFFFFF', width = 1)), 
+        showlegend = FALSE) %>% 
+  layout(title = 'Supports de lecture',
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+type25
+
+```
+
+
 Données
 =========================================
 
@@ -801,5 +908,4 @@ filter_checkbox(
 datatable(st)
 
 ```
-
 

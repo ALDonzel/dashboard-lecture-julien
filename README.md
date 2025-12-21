@@ -5,4 +5,4 @@ Dashboard réalisé en R (flexdashboard) à partir des données publiées ici : 
 Dashboard accessible ici : https://aldonzel.github.io/dashboard-lecture-julien/dashboard_lectures.html
 
 Créé en décembre 2024
-Dernière mise à jour : janvier 2025
+Dernière mise à jour : décembre 2025
