@@ -1,5 +1,5 @@
 ---
-title: "Lectures 2020-2025"
+title: "Lectures Julien"
 output: 
   flexdashboard::flex_dashboard:
     theme: lumen
@@ -33,7 +33,7 @@ knitr::opts_chunk$set(message = F)
 ```{r}
 # Fichier source de données
 
-data <- read.csv("liste_totale.csv", encoding = "UTF-8")
+data <- read.csv("https://framagit.org/Mac_Graveur/lectures/-/raw/main/liste-extra-wikidata_iso.csv", encoding = "UTF-8")
 
 st <- SharedData$new(data)
 
@@ -50,7 +50,8 @@ Column {.sidebar data-width=650}
 
 ```{r}
 mois <- data %>% 
-  group_by(Année_début) %>% 
+  na.omit(mois_début) %>%
+  group_by(Année_début) %>%
   count(mois_début) %>%mutate(mois_début = recode(mois_début,
             "1" = "Ja",
             "2" = "F",
@@ -70,7 +71,7 @@ mois$mois_début <- factor(mois$mois_début, levels = c("Ja", "F", "Ma", "Av", "
 mois$Année_début <- factor(mois$Année_début)
 
  plotmois <- mois %>%
-  ggplot( aes(x=mois_début, y=n, group=Année_début, color=Année_début)) +
+  ggplot( aes(x=mois_début, y=n, group=Année_début, color=Année_début, text = paste("Mois de début : ", mois_début, "\nNombre : ", n))) +
     geom_line() +
     scale_color_viridis(discrete = TRUE, name = "Année") +
     theme(
@@ -82,7 +83,7 @@ mois$Année_début <- factor(mois$Année_début)
     xlab("Mois de début de lecture") +
     ylab ("Nombre")
  
-ggplotly(plotmois)
+ggplotly(plotmois, tooltip = "text")
 ```
 
 
@@ -131,10 +132,11 @@ genre <- data %>%
            "C" = "Collectif",
            "F" = "Femme",
            "H" = "Homme",
-           "M" = "Homme")) %>% 
+           "M" = "Homme",
+           "NB" = "Non binaire")) %>% 
     count(Genre.auteur, Année_début)
 
-genre <- ggplot(genre, aes(fill= Genre.auteur, y=n, x=factor(Année_début, levels= c("2020", "2021", "2022", "2023", "2024", "2025")), text = paste("Nombre : ", n, "\nType :", Genre.auteur))) +
+genre <- ggplot(genre, aes(fill= Genre.auteur, y=n, x=factor(Année_début, levels= c("2020", "2021", "2022", "2023", "2024", "2025", "Avant 2020")), text = paste("Nombre : ", n, "\nType :", Genre.auteur))) +
   geom_bar(position = "stack", stat = "identity" ) +
   ggtitle("Répartition par genres et par années") +
    labs(
@@ -167,7 +169,7 @@ myPlotCord <- circleLayoutVertices(packing)
 
 pl <- ggplot() + 
   geom_polygon(data = myPlotCord, aes(x, y, group = id, fill= as.factor(id))) + 
-  geom_text(data = auteurs, aes(x, y, size=n, label = paste0(Auteur))) + 
+  geom_text(data = auteurs, aes(x, y, size=n, label = paste0(Auteur), text = paste("Auteur : ", Auteur, "<br>", "Nombre : ", n))) + 
   scale_size_continuous(range = c(2,4)) + 
   coord_equal() + 
   theme_void() +
@@ -179,7 +181,7 @@ pl <- ggplot() +
   scale_fill_viridis(discrete = T, option = "viridis")
 
 
-ggplotly(pl)
+ggplotly(pl, tooltip = "text")
 
 
 
@@ -227,6 +229,44 @@ edit <- data %>%
 edit
 ```
 
+Avant 2020
+==================================================
+
+```{r}
+ante20 <- data %>% 
+  filter(année_fin == "Avant 2020")
+```
+
+Row
+--------------------------------------------------
+### Nombre de livres lus 
+
+```{r}
+
+nbrante20 <- ante20 %>% 
+        reframe(n())
+
+valueBox(
+  value = nbrante20, 
+  icon = "fa-book")
+
+```
+### Nombre de pages lues
+
+```{r}
+
+nbrpagesante20 <- ante20 %>%
+  filter(Pages > 0) %>%
+  reframe(Pages) %>%
+  sum()
+
+valueBox(
+  value = nbrpagesante20, 
+  icon = "fa-file")
+
+```
+
+
 
 
 2020
@@ -234,7 +274,7 @@ edit
 
 ```{r}
 an20 <- data %>% 
-  filter(Année_début == "2020")
+  filter(année_fin == "2020")
 ```
 
 
@@ -345,7 +385,7 @@ type20
 
 ```{r}
 an21 <- data %>% 
-  filter(Année_début == "2021")
+  filter(année_fin == "2021")
 ```
 
 Row
@@ -452,7 +492,7 @@ type21
 
 ```{r}
 an22 <- data %>% 
-  filter(Année_début == "2022")
+  filter(année_fin == "2022")
 ```
 
 Row
@@ -559,7 +599,7 @@ type22
 
 ```{r}
 an23 <- data %>% 
-  filter(Année_début == "2023")
+  filter(année_fin == "2023")
 ```
 
 Row
@@ -666,7 +706,7 @@ type23
 
 ```{r}
 an24 <- data %>% 
-  filter(Année_début == "2024")
+  filter(année_fin == "2024")
 ```
 
 Row
@@ -773,7 +813,7 @@ type24
 
 ```{r}
 an25 <- data %>% 
-  filter(Année_début == "2025")
+  filter(année_fin == "2025")
 ```
 
 Row
@@ -874,6 +914,9 @@ type25 <- an25 %>%
 type25
 
 ```
+
+Cartographie
+=========================================
 
 
 Données
