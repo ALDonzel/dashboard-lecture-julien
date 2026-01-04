@@ -19,6 +19,8 @@ library(flexdashboard)
 library(ggplot2)
 library(highcharter)
 library(forcats)
+library(sf)
+library(leaflet)
 ```
 
 ```{r}
@@ -237,6 +239,7 @@ ante20 <- data %>%
   filter(année_fin == "Avant 2020")
 ```
 
+
 Row
 --------------------------------------------------
 ### Nombre de livres lus 
@@ -265,6 +268,80 @@ valueBox(
   icon = "fa-file")
 
 ```
+
+Row
+--------------------------------------------------
+
+### Top des autrices et des auteurs
+
+```{r}
+auteursante20 <- ante20 %>% 
+  group_by(Auteur) %>% 
+  count(Auteur) %>% 
+  arrange(desc(n)) %>% 
+  head(28)
+
+packingante20 <- circleProgressiveLayout(auteursante20$n, sizetype="area")
+
+auteursante20 <- cbind.data.frame(auteursante20, packingante20)
+
+myPlotCordante20 <- circleLayoutVertices(packingante20)
+
+plante20 <- ggplot() + 
+  geom_polygon(data = myPlotCordante20, aes(x, y, group = id, fill= as.factor(id))) + 
+  geom_text(data = auteursante20, aes(x, y, size=n, label = paste0(Auteur), text = paste("Auteur : ", Auteur, "<br>", "Nombre : ", n))) + 
+  scale_size_continuous(range = c(2,4)) + 
+  coord_equal() + 
+  theme_void() +
+  theme(legend.position="none",
+        panel.border = element_blank(),
+        panel.grid.major = element_blank()) + 
+ scale_fill_viridis(discrete = T, option = "viridis")
+
+
+ggplotly(plante20, tooltip = "text")
+```
+
+### Nationalités des auteurs et autrices
+
+```{r}
+natioante20 <- ante20 %>% 
+  group_by (Nationalité) %>%
+  filter(Nationalité != "N/A") %>%
+  count(Nationalité) %>% 
+  arrange(desc(n)) %>% 
+  head(10)
+
+options(highcharter.theme = hc_theme_smpl(tooltip = list(valueDecimals = 0)))
+
+hcante20 <- natioante20 %>%
+  hchart(
+    "treemap", 
+    hcaes(x = Nationalité, value = n, color = n)
+    ) %>%
+  hc_colorAxis(stops = color_stops(colors = viridis(100)))
+
+hcante20
+
+```
+
+### Top des maisons d'édition
+
+```{r}
+editante20 <- ante20 %>% 
+  group_by(Editeur) %>% 
+  count(Editeur) %>% 
+  arrange(desc(n)) %>% 
+  head(10) %>%
+  ggplot(aes(x=reorder(Editeur, n), y=n)) +
+    geom_bar(stat="identity", fill="#32648E", alpha=.6, width=.5) +
+    coord_flip() +
+    xlab("Editeur")+
+    ylab("Nombre")
+
+editante20
+```
+
 
 
 
@@ -326,17 +403,20 @@ valueBox(
 Row
 --------------------------------------------------
 
+### Temps de lecture suivant le nombre de pages
+
 ```{r}
 time20 <- an20 %>% 
   ggplot(aes(x=Pages, y=ecart_date, color=Genre.auteur)) + 
     geom_point(size = 3) +
-    labs(title="Temps de lecture suivant le nombre \nde pages",
-       x="Nombre de pages", y = "Nombre de jours de lecture", colour = "Genre")+
+    labs(x="Nombre de pages", y = "Nombre de jours de lecture", colour = "Genre")+
     scale_colour_viridis_d(labels = c("Collectif", "Femme", "Homme"))+
     theme_minimal()
 
 time20
 ```
+
+### Nationalités des auteurs et autrices
 
 ```{r}
 natio20 <- an20 %>% 
@@ -353,12 +433,13 @@ hc <- natio20 %>%
     "treemap", 
     hcaes(x = Nationalité, value = n, color = n)
     ) %>%
-  hc_title(text = "Nationalités des auteurs et autrices")%>%
   hc_colorAxis(stops = color_stops(colors = viridis(100)))
 
 hc
 
 ```
+
+### Supports de lecture
 
 ```{r}
 type20 <- an20 %>%
@@ -370,8 +451,7 @@ type20 <- an20 %>%
         hoverinfo = 'text',
         marker = list(colors = c("#481568", "#55C667"), line = list(color = '#FFFFFF', width = 1)), 
         showlegend = FALSE) %>% 
-  layout(title = 'Supports de lecture',
-         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+  layout(xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
          yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
 
 type20
@@ -435,17 +515,20 @@ valueBox(
 Row
 --------------------------------------------------
 
+### Temps de lecture suivant le nombre de pages
+
 ```{r}
 time21 <- an21 %>% 
   ggplot(aes(x=Pages, y=ecart_date, color=Genre.auteur)) + 
     geom_point(size = 3) +
-    labs(title="Temps de lecture suivant le nombre \nde pages",
-       x="Nombre de pages", y = "Nombre de jours de lecture", colour = "Genre")+
+    labs(x="Nombre de pages", y = "Nombre de jours de lecture", colour = "Genre")+
     scale_colour_viridis_d(labels = c("Collectif", "Femme", "Homme"))+
     theme_minimal()
 
 time21
 ```
+
+### Nationalités des auteurs et autrices
 
 ```{r}
 natio21 <- an21 %>% 
@@ -462,12 +545,13 @@ hc <- natio21 %>%
     "treemap", 
     hcaes(x = Nationalité, value = n, color = n)
     ) %>%
-  hc_title(text = "Nationalités des auteurs et autrices")%>%
   hc_colorAxis(stops = color_stops(colors = viridis(100)))
 
 hc
 
 ```
+
+### Supports de lecture
 
 ```{r}
 type21 <- an21 %>%
@@ -479,8 +563,7 @@ type21 <- an21 %>%
         hoverinfo = 'text',
         marker = list(colors = c("#481568", "#55C667"), line = list(color = '#FFFFFF', width = 1)), 
         showlegend = FALSE) %>% 
-  layout(title = 'Supports de lecture',
-         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+  layout(xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
          yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
 
 type21
@@ -542,17 +625,20 @@ valueBox(
 Row
 --------------------------------------------------
 
+### Temps de lecture suivant le nombre de pages
+
 ```{r}
 time <- an22 %>% 
   ggplot(aes(x=Pages, y=ecart_date, color=Genre.auteur)) + 
     geom_point(size = 3) +
-    labs(title="Temps de lecture suivant le nombre \nde pages",
-       x="Nombre de pages", y = "Nombre de jours de lecture", colour = "Genre")+
+    labs(x="Nombre de pages", y = "Nombre de jours de lecture", colour = "Genre")+
     scale_colour_viridis_d(labels = c("Collectif", "Femme", "Homme"))+
     theme_minimal()
 
 time
 ```
+
+### Nationalités des auteurs et autrices
 
 ```{r}
 natio22 <- an22 %>% 
@@ -569,12 +655,13 @@ hc <- natio22 %>%
     "treemap", 
     hcaes(x = Nationalité, value = n, color = n)
     ) %>%
-  hc_title(text = "Nationalités des auteurs et autrices")%>%
   hc_colorAxis(stops = color_stops(colors = viridis(100)))
 
 hc
 
 ```
+
+### Supports de lecture
 
 ```{r}
 type22 <- an22 %>%
@@ -586,8 +673,7 @@ type22 <- an22 %>%
         hoverinfo = 'text',
         marker = list(colors = c("#481568", "#55C667"), line = list(color = '#FFFFFF', width = 1)), 
         showlegend = FALSE) %>% 
-  layout(title = 'Supports de lecture',
-         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+  layout(xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
          yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
 
 type22
@@ -649,17 +735,20 @@ valueBox(
 Row
 --------------------------------------------------
 
+### Temps de lecture suivant le nombre de pages
+
 ```{r}
 time <- an23 %>% 
   ggplot(aes(x=Pages, y=ecart_date, color=Genre.auteur)) + 
     geom_point(size = 3) +
-    labs(title="Temps de lecture suivant le nombre \nde pages",
-       x="Nombre de pages", y = "Nombre de jours de lecture", colour = "Genre")+
+    labs(x="Nombre de pages", y = "Nombre de jours de lecture", colour = "Genre")+
     scale_colour_viridis_d(labels = c("Collectif", "Femme", "Homme"))+
     theme_minimal()
 
 time
 ```
+
+### Nationalités des auteurs et autrices
 
 ```{r}
 natio23 <- an23 %>% 
@@ -676,12 +765,13 @@ hc <- natio23 %>%
     "treemap", 
     hcaes(x = Nationalité, value = n, color = n)
     ) %>%
-  hc_title(text = "Nationalités des auteurs et autrices")%>%
   hc_colorAxis(stops = color_stops(colors = viridis(100)))
 
 hc
 
 ```
+
+### Supports de lecture
 
 ```{r}
 type23 <- an23 %>%
@@ -693,8 +783,7 @@ type23 <- an23 %>%
         hoverinfo = 'text',
         marker = list(colors = c("#481568", "#55C667"), line = list(color = '#FFFFFF', width = 1)), 
         showlegend = FALSE) %>% 
-  layout(title = 'Supports de lecture',
-         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+  layout(xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
          yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
 
 type23
@@ -756,17 +845,20 @@ valueBox(
 Row
 --------------------------------------------------
 
+### Temps de lecture suivant le nombre de pages
+
 ```{r}
 time <- an24 %>% 
   ggplot(aes(x=Pages, y=ecart_date, color=Genre.auteur)) + 
     geom_point(size = 3) +
-    labs(title="Temps de lecture suivant le nombre \nde pages",
-       x="Nombre de pages", y = "Nombre de jours de lecture", colour = "Genre")+
+    labs(x="Nombre de pages", y = "Nombre de jours de lecture", colour = "Genre")+
     scale_colour_viridis_d(labels = c("Collectif", "Femme", "Homme"))+
     theme_minimal()
 
 time
 ```
+
+### Nationalités des auteurs et autrices
 
 ```{r}
 natio24 <- an24 %>% 
@@ -783,12 +875,13 @@ hc <- natio24 %>%
     "treemap", 
     hcaes(x = Nationalité, value = n, color = n)
     ) %>%
-  hc_title(text = "Nationalités des auteurs et autrices")%>%
   hc_colorAxis(stops = color_stops(colors = viridis(100)))
 
 hc
 
 ```
+
+### Supports de lecture
 
 ```{r}
 type24 <- an24 %>%
@@ -800,8 +893,7 @@ type24 <- an24 %>%
         hoverinfo = 'text',
         marker = list(colors = c("#481568", "#55C667"), line = list(color = '#FFFFFF', width = 1)), 
         showlegend = FALSE) %>% 
-  layout(title = 'Supports de lecture',
-         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+  layout(xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
          yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
 
 type24
@@ -863,17 +955,20 @@ valueBox(
 Row
 --------------------------------------------------
 
+### Temps de lecture suivant le nombre de pages
+
 ```{r}
 time25 <- an25 %>% 
   ggplot(aes(x=Pages, y=ecart_date, color=Genre.auteur)) + 
     geom_point(size = 3) +
-    labs(title="Temps de lecture suivant le nombre \nde pages",
-       x="Nombre de pages", y = "Nombre de jours de lecture", colour = "Genre")+
+    labs(x="Nombre de pages", y = "Nombre de jours de lecture", colour = "Genre")+
     scale_colour_viridis_d(labels = c("Collectif", "Femme", "Homme"))+
     theme_minimal()
 
 time25
 ```
+
+### Nationalités des auteurs et autrices
 
 ```{r}
 natio25 <- an25 %>% 
@@ -890,12 +985,13 @@ hc <- natio25 %>%
     "treemap", 
     hcaes(x = Nationalité, value = n, color = n)
     ) %>%
-  hc_title(text = "Nationalités des auteurs et autrices")%>%
   hc_colorAxis(stops = color_stops(colors = viridis(100)))
 
 hc
 
 ```
+
+### Supports de lecture
 
 ```{r}
 type25 <- an25 %>%
@@ -907,8 +1003,7 @@ type25 <- an25 %>%
         hoverinfo = 'text',
         marker = list(colors = c("#481568", "#55C667"), line = list(color = '#FFFFFF', width = 1)), 
         showlegend = FALSE) %>% 
-  layout(title = 'Supports de lecture',
-         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+  layout(xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
          yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
 
 type25
@@ -917,6 +1012,53 @@ type25
 
 Cartographie
 =========================================
+
+Column {.sidebar data-width=350}
+------------------------------------------------
+
+Cette carte présente le nombre d'ouvrages lus par pays en fonction de la nationalité des auteur·ices. L'objectif dans les années à venir est d'élargir les lectures aux auteur·ices africain·es.
+
+Row {data-width=650}
+------------------------------------------------
+
+### Carte
+
+```{r}
+
+datam <- data %>% 
+  group_by(code.ISO.3166.1.alpha.3) %>% 
+  count(code.ISO.3166.1.alpha.3) %>% 
+  rename("ISO3" = "code.ISO.3166.1.alpha.3")
+
+map <- read_sf("TM_WORLD_BORDERS_SIMPL-0.3.shx")
+
+```
+
+```{r}
+datamap <- map %>% 
+  left_join(datam, by = "ISO3")
+
+```
+
+
+```{r}
+bins <- c(0, 5, 10, 50, 100, 200, 400)
+pal <- colorBin("RdPu", domain = datamap$n, bins = bins)
+```
+
+
+```{r}
+m <- leaflet(datamap)%>% 
+  addTiles()  %>% 
+  setView( lat=10, lng=0 , zoom=2) %>%
+  addPolygons( stroke = FALSE, 
+               fillOpacity = 0.5, 
+               smoothFactor = 0.5, 
+               popup = ~paste0(NAME, "<br/>", "Nombre de livres lus : ", round(n)),
+                fillColor = ~pal(n))
+
+m
+```
 
 
 Données
@@ -929,7 +1071,7 @@ Données
 
 filter_select(
     id = "Auteur",
-    label = "Auteur.ice",
+    label = "Auteur·ice",
     sharedData = st,
     group = ~Auteur
 )
